@@ -1,0 +1,87 @@
+services:
+  # ── PostgreSQL Database ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: sejilo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sejilo
+      POSTGRES_USER: sejilo
+      POSTGRES_PASSWORD: sejilo_secret_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sejilo -d sejilo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis Cache & Real-Time Presence ──
+  redis:
+    image: redis:7-alpine
+    container_name: sejilo-redis
+    restart: unless-stopped
+    command: redis-server --requirepass sejilo_redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "sejilo_redis_password", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO (S3-Compatible Storage for Media) ──
+  minio:
+    image: minio/minio:latest
+    container_name: sejilo-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── NestJS Backend Application ──
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sejilo-backend
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://sejilo:sejilo_secret_password@postgres:5432/sejilo?schema=public"
+      REDIS_URL: "redis://:sejilo_redis_password@redis:6379"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in your environment before running docker compose}"
+      STORAGE_ENDPOINT: "http://minio:9000"
+      STORAGE_BUCKET: "sejilo-media"
+      S3_REGION: "us-east-1"
+      S3_ACCESS_KEY_ID: "${S3_ACCESS_KEY_ID:-minioadmin}"
+      S3_SECRET_ACCESS_KEY: "${S3_SECRET_ACCESS_KEY:-minioadmin}"
+      S3_FORCE_PATH_STYLE: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

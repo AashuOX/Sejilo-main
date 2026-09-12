@@ -1,0 +1,19 @@
+# Cloudflare Tunnel configuration (STEP 29)
+# Run `cloudflared tunnel --config tunnel.yml run sejilo-backend` on the origin.
+# The Terraform DNS record for api.sejilo.chat is orange-clouded and points at
+# Cloudflare; the Tunnel bridges the edge to this private origin (no open firewall
+# port 8080 needed).
+
+tunnel: sejilo-backend
+credentials-file: /etc/cloudflared/sejilo-backend.json
+
+ingress:
+  # API traffic -> local Docker backend container
+  - hostname: api.sejilo.chat
+    service: https://localhost:8080
+    originRequest:
+      noTLSVerify: false        # backend should present the Origin CA cert
+      httpHostHeader: api.sejilo.chat
+
+  # Catch-all: reject anything else through this tunnel
+  - service: http_status:404

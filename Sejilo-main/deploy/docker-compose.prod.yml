@@ -1,0 +1,54 @@
+# SejiloChat - production stack for a single VPS.
+#
+# Differences from the repo-root docker-compose.yml, which is a local/dev stack:
+#   * Caddy terminates TLS on 80/443 and is the only thing published to the host.
+#   * The backend is NOT published; it is reachable only over the internal
+#     `edge` network, so nobody can bypass the proxy or the rate limiter.
+#   * Postgres and Redis stay on the `backend` network, which has no route out.
+#   * Log rotation is set on every service - an unrotated json log will fill a
+#     40 GB disk and take the database down with it.
+#
+# Usage on the server:
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+name: sejilo
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in .env, e.g. api.sejilochat.com}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env for Let's Encrypt expiry notices}
+    networks: [edge]
+    depends_on: [backend]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sejilo}
+      POSTGRES_USER: ${POSTGRES_USER:-sejilo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - sejilo-postgres:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

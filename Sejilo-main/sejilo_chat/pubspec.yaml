@@ -1,0 +1,40 @@
+name: sejilo_chat
+description: A SejiloChat client for Windows and Android.
+publish_to: none
+version: 0.5.0+10
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  audioplayers: ^6.8.1
+  cryptography: ^2.9.0
+  cryptography_flutter: ^2.3.4
+  dio: ^5.4.0
+  file_picker: 10.3.10
+  flutter:
+    sdk: flutter
+  flutter_bluetooth_plugin:
+    path: packages/flutter_bluetooth_plugin
+  flutter_secure_storage: ^10.3.1
+  flutter_riverpod: ^2.4.9
+  http: ^1.5.0
+  # Pure-Dart decode/resize/JPEG-encode. dart:ui can only encode PNG, which for
+  # a photograph is several times larger than its JPEG source — that is why
+  # uploads used to grow instead of shrink. See lib/core/image_utils.dart.
+  image: ^4.9.2
+  json_annotation: ^4.8.1
+  mobile_scanner: ^7.4.0
+  path_provider: ^2.1.6
+  record: ^7.1.1
+  riverpod_annotation: ^2.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/sejilo_logo.png
