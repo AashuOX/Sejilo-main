@@ -13,46 +13,76 @@ void main() {
     late Map<String, String> mockStorage;
     late AccountAuthController auth;
 
-    http.Client mockBackend() => MockClient((request) async {
-          if (request.url.path == '/v1/auth/password/register') {
-            final body = jsonDecode(request.body) as Map<String, dynamic>;
-            return http.Response(
-              jsonEncode({
+    http.Client mockBackend() {
+      var currentUsername = 'testuser';
+      var currentEmail = 'testuser@example.com';
+      var currentDisplayName = 'Test User';
+      var currentBio = 'Online bio';
+
+      return MockClient((request) async {
+        if (request.url.path == '/v1/users' ||
+            request.url.path == '/v1/auth/password/register') {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          currentEmail = body['email'] as String? ?? currentEmail;
+          currentUsername = body['username'] as String? ?? currentUsername;
+          currentDisplayName =
+              body['displayName'] as String? ?? currentUsername;
+          return http.Response(
+            jsonEncode({
+              'id': 'usr_server_123',
+              'token': 'server.bearer.token',
+              'profile': {
                 'id': 'usr_server_123',
-                'token': 'server.bearer.token',
-                'profile': {
-                  'id': 'usr_server_123',
-                  'email': body['email'],
-                  'username': body['username'],
-                  'displayName': body['displayName'] ?? body['username'],
-                  'bio': 'Online bio',
-                  'avatar': null,
-                },
-              }),
-              201,
+                'email': currentEmail,
+                'username': currentUsername,
+                'displayName': currentDisplayName,
+                'bio': currentBio,
+                'avatar': null,
+              },
+            }),
+            201,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/v1/auth/password/login') {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          if (body['password'] == 'WrongPassword!') {
+            return http.Response(
+              jsonEncode({'message': 'Invalid credentials'}),
+              401,
               headers: {'content-type': 'application/json'},
             );
           }
-          if (request.url.path == '/v1/auth/password/login') {
-            final body = jsonDecode(request.body) as Map<String, dynamic>;
-            return http.Response(
-              jsonEncode({
+          final identifier = body['identifier'] as String? ?? currentUsername;
+          final isEmail = identifier.contains('@');
+          final user = isEmail ? currentUsername : identifier;
+          final email = isEmail ? identifier : currentEmail;
+          return http.Response(
+            jsonEncode({
+              'id': 'usr_server_123',
+              'token': 'server.bearer.token',
+              'profile': {
                 'id': 'usr_server_123',
-                'token': 'server.bearer.token',
-                'profile': {
-                  'id': 'usr_server_123',
-                  'email': body['email'],
-                  'username': 'server_user',
-                  'displayName': 'Server User',
-                  'bio': 'Server bio',
-                },
-              }),
-              200,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          return http.Response(jsonEncode({'message': 'Not found'}), 404);
-        });
+                'email': email,
+                'username': user,
+                'displayName': currentDisplayName,
+                'bio': currentBio,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/v1/me' && request.method == 'DELETE') {
+          return http.Response(
+            jsonEncode({'status': 'deleted'}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(jsonEncode({'message': 'Not found'}), 404);
+      });
+    }
 
     setUp(() async {
       mockStorage = {};

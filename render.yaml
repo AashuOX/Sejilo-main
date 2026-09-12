@@ -37,11 +37,10 @@ services:
     # Asia; swap for oregon / ohio / virginia / frankfurt to sit nearer your users
     # and, ideally, nearer the Supabase and Upstash regions you pick.
     region: singapore
-    # The backend is one level down from the git root in this repository.
-    rootDir: Sejilo-main/backend
-    # This repository's work happens on master; Render otherwise follows whatever
-    # GitHub reports as the default branch, which is `main` on new repositories.
-    branch: master
+    # The backend directory in this repository.
+    rootDir: backend
+    # Track the repository's default branch `main` on GitHub.
+    branch: main
     # `--include=dev` is required, not optional: NODE_ENV=production is set below
     # and npm then defaults `omit` to `dev`, which would strip @nestjs/cli and
     # typescript and fail the build with `nest: not found`. The dev packages are

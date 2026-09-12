@@ -109,3 +109,6 @@ dist/
 *.zip
 *.exe
 sejilo_chat/android/key.properties
+
+# ── Local extract artifact ──
+Sejilo-main/
