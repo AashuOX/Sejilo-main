@@ -1,0 +1,121 @@
+# SejiloChat — Render Blueprint (free plan, hosted 24/7)
+#
+# What this replaces: scripts/go-online.ps1 publishes the backend running on your
+# laptop through a Cloudflare quick tunnel. That URL dies with the process and
+# rotates on every restart. This blueprint runs the backend on Render instead, so
+# it stays reachable at a stable https://<name>.onrender.com with your machine off.
+#
+# Managed Postgres and Redis are deliberately NOT declared here:
+#   * Render's free Postgres expires 30 days after creation, so it cannot host a
+#     permanent deployment. Use Supabase's free plan (no expiry, though a project
+#     pauses after 7 idle days) and paste its SESSION POOLER connection string
+#     into DATABASE_URL.
+#   * Render's free Key Value instance never persists to disk and is wiped on any
+#     restart. Any managed Redis 6+ endpoint works instead — Redis Cloud's free
+#     30 MB database or Upstash's free 256 MB, both without expiry.
+# Both are prompted for when the blueprint is applied — see docs/FREE_HOSTING.md.
+#
+# Free-plan facts that shape the settings below:
+#   * 512 MB RAM / 0.1 CPU, one instance, ephemeral filesystem (no disks).
+#   * Spins down after 15 minutes with no inbound traffic; the next request waits
+#     ~1 minute for the wake-up. .github/workflows/keep-backend-awake.yml pings it
+#     to prevent that.
+#   * 750 instance hours per workspace per month. A month is ~730 hours, so ONE
+#     always-awake free service fits; a second one will exhaust the allowance and
+#     suspend both.
+#   * Outbound ports 25/465/587 are blocked, so SMTP mail cannot work. Not an
+#     issue here: auth/email.service.ts sends over the Resend HTTPS API.
+#
+# Apply:  Render Dashboard → New → Blueprint → pick this repo.
+
+services:
+  - type: web
+    name: sejilo-backend
+    runtime: node
+    plan: free
+    # Free instances run in every region. `singapore` is the closest one to South
+    # Asia; swap for oregon / ohio / virginia / frankfurt to sit nearer your users
+    # and, ideally, nearer the Supabase and Upstash regions you pick.
+    region: singapore
+    # The backend is one level down from the git root in this repository.
+    rootDir: Sejilo-main/backend
+    # This repository's work happens on master; Render otherwise follows whatever
+    # GitHub reports as the default branch, which is `main` on new repositories.
+    branch: master
+    # `--include=dev` is required, not optional: NODE_ENV=production is set below
+    # and npm then defaults `omit` to `dev`, which would strip @nestjs/cli and
+    # typescript and fail the build with `nest: not found`. The dev packages are
+    # only needed to compile; dist/ is what runs.
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
+    # Migrations run on every boot rather than in a pre-deploy step, which the free
+    # plan does not offer. `migrate deploy` is idempotent: after the first deploy it
+    # is a couple of catalog queries and adds ~2s to a cold start.
+    startCommand: node migrate-supabase.cjs && node dist/main.js
+    # Cheapest probe in the app: no Postgres or Redis round trip, so a deploy is
+    # never marked unhealthy because Supabase or Upstash was momentarily slow.
+    healthCheckPath: /health/live
+    autoDeploy: true
+    envVars:
+      # Render injects PORT itself (10000) and main.ts reads it — do not pin it.
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+
+      # Render's load balancer is the only way in, so X-Forwarded-For is
+      # trustworthy here and rate limiting can bucket per real client IP.
+      - key: TRUST_PROXY
+        value: "true"
+
+      # Off in production: publishing every route, DTO and validation rule to
+      # anonymous callers is free reconnaissance. Flip to "true" temporarily if you
+      # need the browser docs at /api/docs.
+      - key: ENABLE_SWAGGER
+        value: "false"
+
+      # The .env.example defaults point at n8n *test* webhook endpoints, which only
+      # accept traffic while a workflow tab is open. Leave off until real
+      # production webhook URLs are set in the dashboard.
+      - key: WEBHOOKS_ENABLED
+        value: "false"
+
+      # Render generates a base64 256-bit value on first apply and keeps it across
+      # deploys. Comfortably over the 32-char minimum that env.validation.ts
+      # enforces in production. Never reuse the laptop .env secrets here.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: TOKEN_PEPPER
+        generateValue: true
+
+      # Prompted on apply. Supabase's SESSION POOLER string, on port 5432:
+      # postgresql://postgres.<ref>:pw@aws-0-<region>.pooler.supabase.com:5432/postgres
+      # Two hosts here fail, for different reasons. The direct
+      # `db.<ref>.supabase.co` host resolves to IPv6 only on new projects, and a
+      # free Render instance has no IPv6 route to it. The transaction pooler on
+      # port 6543 has no session-level advisory lock, and `prisma migrate deploy`
+      # runs on every boot and needs one, so the start command fails instead of
+      # the app booting. Session mode on 5432 satisfies both.
+      - key: DATABASE_URL
+        sync: false
+      # Prompted on apply — paste it in the dashboard, never in this file.
+      # ioredis takes transport security from the scheme, so the URL has to match
+      # what the database actually offers: rediss:// where TLS is on (Upstash is
+      # TLS-only, and plain redis:// there hangs), redis:// where it is not (a
+      # Redis Cloud database has TLS off unless you enable it, and rediss://
+      # against one fails with an SSL "wrong version number").
+      - key: REDIS_URL
+        sync: false
+
+      # Media uploads. Prompted on apply; blank is accepted and simply disables
+      # uploads until you fill it in. cloudinary://<api-key>:<api-secret>@<cloud>
+      - key: CLOUDINARY_URL
+        sync: false
+
+
+      # Browser origins allowed to call the API, comma-separated. Empty in
+      # production fails closed: browsers are refused, native Flutter clients (no
+      # Origin header) keep working. Set it only when you ship a web build.
+      - key: CORS_ORIGIN
+        value: ""

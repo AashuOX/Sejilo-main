@@ -1,0 +1,104 @@
+<p class="lede">SejiloChat is a social app for Android and Windows. When you have a
+connection it behaves like any other messenger: a feed, profiles, stories,
+direct messages. When you do not, it keeps delivering — by handing messages
+from phone to phone over Bluetooth Low Energy until one of them reaches the
+recipient or reaches the internet.</p>
+
+<p class="cta">
+<a class="btn" href="/download/">Get the app</a>
+<a class="btn ghost" href="/features/offline-mesh/">How the offline part works</a>
+</p>
+
+<h2>Two ways to deliver one message</h2>
+
+<p>Every message is handed to whichever transport can carry it, and the app tells
+you which one did. There is no separate “offline mode” to remember to switch
+on.</p>
+
+<figure class="diagram">
+<svg viewBox="0 0 640 200" role="img" aria-labelledby="routing-title routing-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="routing-title">How a message is routed</title>
+<desc id="routing-desc">A message leaves your device. If the server is
+reachable it is delivered over the internet in one hop. If it is not, the
+message is queued and offered to nearby devices over Bluetooth, which relay it
+onward; when any device on that path regains internet, the queue is
+synchronised to the server.</desc>
+<g fill="none" stroke="#1E293B" stroke-width="1.5">
+<rect x="8" y="76" width="120" height="48" rx="10" fill="#121A2A"/>
+<rect x="260" y="12" width="150" height="48" rx="10" fill="#121A2A"/>
+<rect x="260" y="140" width="150" height="48" rx="10" fill="#121A2A"/>
+<rect x="512" y="76" width="120" height="48" rx="10" fill="#121A2A"/>
+</g>
+<g fill="#F8FAFC" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">
+<text x="68" y="105">Your device</text>
+<text x="335" y="41">Internet: one hop</text>
+<text x="335" y="169">Bluetooth: relayed</text>
+<text x="572" y="105">Recipient</text>
+</g>
+<g stroke="#22D3EE" stroke-width="2" fill="none">
+<path d="M128 92 C 190 92 200 36 260 36"/>
+<path d="M410 36 C 470 36 480 92 512 92"/>
+</g>
+<g stroke="#38BDF8" stroke-width="2" stroke-dasharray="6 5" fill="none">
+<path d="M128 108 C 190 108 200 164 260 164"/>
+<path d="M410 164 C 470 164 480 108 512 108"/>
+</g>
+</svg>
+<figcaption>Solid: a server round trip. Dashed: the same message carried by
+nearby devices and synchronised later.</figcaption>
+</figure>
+
+<div class="grid">
+<article class="card">
+<h3>Online</h3>
+<p>Signed in and connected: messages, posts, stories and profiles go through the
+API and are stored server-side, so a second device sees the same history.</p>
+</article>
+<article class="card">
+<h3>Bluetooth, direct</h3>
+<p>No internet, recipient in range: the two devices establish an encrypted
+session and the message is handed over directly. Roughly 10–30 m indoors.</p>
+</article>
+<article class="card">
+<h3>Bluetooth, relayed</h3>
+<p>No internet, recipient out of range: nearby devices running SejiloChat pass
+the message along, each hop covering its own 10–30 m, up to a fixed hop
+limit.</p>
+</article>
+<article class="card">
+<h3>Synchronised</h3>
+<p>Whichever device on that path gets a connection first uploads the queue, so
+messages sent while everyone was offline land in normal history afterwards.</p>
+</article>
+</div>
+
+<h2>What it is honest about</h2>
+
+<div class="note">
+<p>Bluetooth range is not unlimited and cannot be made unlimited. A relayed
+message needs a chain of people who are also running the app; with nobody in
+between, there is no path, and the message waits in the outbox until there
+is one. Mesh delivery is best-effort — good for a classroom, a festival, a
+building, a power cut. It is not a substitute for a mobile network.</p>
+</div>
+
+<h2>Messages are signed, and relays cannot read or edit them</h2>
+
+<p>A relay is a stranger’s phone, so the protocol is built to assume it is
+hostile. Each device holds an Ed25519 key pair; every frame that leaves it is
+signed, and any hop that alters a byte invalidates the signature and is
+dropped. Conversation content is encrypted for the recipient with a key derived
+from an X25519 exchange, so a relay forwards a payload it cannot open. The full
+detail is on the <a href="/features/offline-mesh/">offline mesh page</a>, and
+what does and does not leave your device is on the
+<a href="/privacy/">privacy page</a>.</p>
+
+<h2>Try it, or read on</h2>
+
+<p>The <a href="/download/">download page</a> covers the Android build, the
+Windows desktop build, and building from source. There is a
+<a href="/app/">browser build</a> too, useful for a quick look at the interface
+— it has no Bluetooth access, because browsers do not expose the radio, so the
+offline half only exists on Android and Windows. A plain list of everything the
+app does, with the limits of each, is on the
+<a href="/features/">features page</a>.</p>

@@ -1,0 +1,52 @@
+name: flutter_bluetooth_plugin
+description: A cross-platform Flutter Bluetooth plugin for BLE, GATT, advertising, BlueZ, WinRT, Web Bluetooth, and Android Classic RFCOMM.
+version: 2.0.0
+homepage: https://github.com/yuanzhihong1/flutter_bluetooth_plugin
+repository: https://github.com/yuanzhihong1/flutter_bluetooth_plugin
+issue_tracker: https://github.com/yuanzhihong1/flutter_bluetooth_plugin/issues
+documentation: https://github.com/yuanzhihong1/flutter_bluetooth_plugin#readme
+topics:
+  - bluetooth
+  - ble
+  - gatt
+  - bluetooth-low-energy
+  - flutter-plugin
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  web: ^1.0.0
+  plugin_platform_interface: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.yuanzhihong.flutter_bluetooth_plugin
+        pluginClass: FlutterBluetoothPlugin
+      ios:
+        pluginClass: FlutterBluetoothPlugin
+      linux:
+        pluginClass: FlutterBluetoothPlugin
+      macos:
+        pluginClass: FlutterBluetoothPlugin
+      windows:
+        pluginClass: FlutterBluetoothPluginCApi
+      web:
+        pluginClass: FlutterBluetoothPluginWeb
+        fileName: flutter_bluetooth_plugin_web.dart

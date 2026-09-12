@@ -1,0 +1,12 @@
+SejiloChat Windows BLE test build
+=================================
+
+This is a self-signed development MSIX for local hardware testing.
+
+1. Open SejiloChat-Development.cer.
+2. Choose Install Certificate, Current User, and place it in Trusted People.
+3. Open SejiloChat-Windows-x64.msix and choose Install.
+4. In SejiloChat, enable Visible to nearby devices in the Mesh tab.
+
+Do not install a certificate received from an untrusted source. Verify the
+published SHA-256 hashes before installing either file.
